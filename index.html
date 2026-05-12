@@ -179,7 +179,7 @@
         <label>ÜNVAN SEÇİMİ</label>
         <select id="unvan" onchange="hesapla()">
             <option value="110">BİLGİSAYAR İŞLETMENİ 1-2 (%110)</option>
-            <option value="100">BİLGİSAYAR İŞLETMENİ 3-4 (%100)</option>
+            <option value="100">BİASYAR İŞLETMENİ 3-4 (%100)</option>
             <option value="90">BİLGİSAYAR İŞLETMENİ 5-15 (%90)</option>
             <option value="90">HİZMETLİ 1-4 (%90)</option>
             <option value="80">HİZMETLİ 5-7 (%80)</option>
@@ -263,7 +263,13 @@
     }
 
     function getV(m, b) {
-        const d = [{l:190000,o:15},{l:400000,o:20},{l:1500000,o:27},{l:5300000,o:35},{l:Infinity,o:40}];
+        const d = [
+            {l:190000, o:15},
+            {l:400000, o:20},
+            {l:1500000, o:27},
+            {l:5300000, o:35},
+            {l:Infinity, o:40}
+        ];
         let k=b, s=m, v=0, r=[];
         for(let x of d){
             if(s<x.l){
@@ -277,23 +283,25 @@
     }
 
     function hesapla() {
-        // 1. Kısım Hesaplama
         const b1 = (p('aylik')+p('ek_gosterge')+p('yan_odeme')+p('ozel_hizmet')+p('kalkinma')) * 2.35;
         document.getElementById('top1').innerText = f(b1/2.35)+" TL";
         document.getElementById('brut1').innerText = f(b1)+" TL";
 
-        // 2. Kısım Hesaplama ve Matrah Senkronizasyonu
         const ms = parseFloat(document.getElementById('matrah_sabit').value)||0;
-        
-        // Matrahı diğer kısımlara otomatik aktar
         document.getElementById('kumMatrahTaban').value = ms;
         document.getElementById('tesvikMatrahInput').value = ms;
 
         const os = parseFloat(document.getElementById('unvan').value)/100;
         const b2a = 9500 * 1.387871 * os;
         const n2h = (b2a * 0.99241) * 1.20;
+        
         let gvs = 0.15;
-        if(ms>940000) gvs=0.35; else if(ms>310000) gvs=0.27; else if(ms>130000) gvs=0.20;
+        if(ms >= 5300000) gvs = 0.40;
+        else if(ms >= 1500000) gvs = 0.35;
+        else if(ms >= 400000) gvs = 0.27;
+        else if(ms >= 190000) gvs = 0.20;
+        else gvs = 0.15;
+
         const b2 = n2h / (1 - (gvs + 0.00759));
         document.getElementById('net2').innerText = f(n2h)+" TL";
         document.getElementById('brut2').innerText = f(b2)+" TL";
@@ -301,18 +309,16 @@
         const kf = Math.max(0, b1 - b2);
         document.getElementById('kalan_fark').innerText = f(kf)+" TL";
 
-        // 3. Kısım Hesaplama
         const tk = parseFloat(document.getElementById('mKatsayi').value)||0;
         const tc = parseFloat(document.getElementById('carpanSecimi').value)||0;
-        const tm = ms; // Otomatik ms kullanıldı
+        const tm = ms;
         const b3 = 9500 * tk * tc;
         const vd3 = getV(tm, b3);
         const n3 = b3 - vd3.v - (b3 * 0.00759);
         document.getElementById('brut3').innerText = f(b3)+" TL";
         document.getElementById('net3').innerText = f(n3)+" TL";
 
-        // 4. Kısım Hesaplama
-        const mm4 = ms; // Otomatik ms kullanıldı
+        const mm4 = ms;
         const b4 = Math.max(0, kf - b3);
         const vd4 = getV(mm4, b4);
         const dv4 = b4 * 0.00759;
