@@ -143,6 +143,14 @@
             font-size: 0.75rem;
             font-weight: bold;
         }
+
+        .not-box {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 10px;
+            text-align: center;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -187,14 +195,14 @@
         </select>
     </div>
     <div class="form-group">
-        <label>MATRAH</label>
-        <p style="font-size: 0.75rem; color: #64748b; margin-top: -5px; margin-bottom: 8px;">(İlgili ay maaş bordronuzdaki Geçen aylar vergi matrahı toplamı ve Aylık vergi matrahı toplamını giriniz)</p>
-        <input type="number" id="matrah_sabit" oninput="hesapla()" placeholder="Bordrodaki rakam">
+        <label>MAAŞ BORDROSU VERGİ MATRAHI</label>
+        <p style="font-size: 0.75rem; color: #64748b; margin-top: -5px; margin-bottom: 8px;">(Geçen aylar vergi matrahı + Aylık vergi matrahı toplamı)</p>
+        <input type="text" id="matrah_ana" oninput="hesapla()" placeholder="Örn: 185000">
     </div>
 
     <div class="results-box">
         <div class="res-line"><span>Hedeflenen Net (%20 Artırımlı):</span><span id="net2">0,00 TL</span></div>
-        <div class="res-line"><span>Kullanılacak Brüt:</span><span id="brut2">0,00 TL</span></div>
+        <div class="res-line"><span>Hesaplanan Sabit Brüt:</span><span id="brut2">0,00 TL</span></div>
     </div>
 </div>
 
@@ -218,12 +226,9 @@
             <option value="0.32">0,32 (Teknik Personel)</option>
         </select>
     </div>
-    <div class="form-group">
-        <label>GEÇEN AYLAR VERGİ MATRAHI</label>
-        <input type="number" id="kumMatrahTaban" value="0" oninput="hesapla()">
-    </div>
 
     <div class="results-box">
+        <div class="res-line"><span>Taban İçin İşlenen Matrah:</span><span id="matrah_taban_goster">0,00 TL</span></div>
         <div class="res-line"><span>Taban Brüt:</span><span id="brut3">0,00 TL</span></div>
         <div class="res-line"><span>Net Taban Ödeme:</span><span id="net3" style="color:#4ade80; font-weight:bold;">0,00 TL</span></div>
     </div>
@@ -231,19 +236,15 @@
 
 <div class="card">
     <span class="kisim-etiket">4. KISIM</span>
-    <h2>TEŞVİK ÖDEMESİ İÇİN KALAN BRÜT TUTAR</h2>
+    <h2>TEŞVİK ÖDEMESİ HESAPLAMA</h2>
 
     <div class="brut-vurgu">
-        <span class="brut-label">Hesaplanan Teşvik Brüt</span>
+        <span class="brut-label">Teşvik İçin Kalan Brüt</span>
         <span id="tesvikBrutGoster" class="brut-val">0,00 TL</span>
     </div>
 
-    <div class="form-group">
-        <label>TEŞVİK İÇİN VERGİ MATRAHI</label>
-        <input type="number" id="tesvikMatrahInput" placeholder="Matrah giriniz" oninput="hesapla()">
-    </div>
-
     <div class="results-box">
+        <div class="res-line"><span>Teşvik İçin İşlenen Matrah:</span><span id="matrah_tesvik_goster">0,00 TL</span></div>
         <div class="res-line"><span>Gelir Vergisi:</span><span><span id="gvOran4" class="tax-tag">%0</span> <span id="gv4">0,00 TL</span></span></div>
         <div class="res-line"><span>Damga Vergisi (%0,759):</span><span id="dv4">0,00 TL</span></div>
         <div style="text-align:center; margin-top:15px; border-top:1px solid #334155; padding-top:10px;">
@@ -251,15 +252,20 @@
             <span id="net4" class="val-highlight">0,00 TL</span>
         </div>
     </div>
+    <p class="not-box">* Sabit ve Taban Brütleri matraha dahil edilmiştir.</p>
 </div>
 
 <script>
     function f(n) { return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    
+    // Hem normal sayıları hem de virgüllü/noktalı girişleri parse eden geliştirilmiş fonksiyon
     function p(id) {
         let v = document.getElementById(id).value;
         if(!v) return 0;
         v = v.toString();
-        return parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+        // Eğer giriş 185.000,00 formatındaysa temizle
+        let clean = v.replace(/\./g, '').replace(',', '.');
+        return parseFloat(clean) || 0;
     }
 
     const DILIMLER = [
@@ -308,43 +314,53 @@
     }
 
     function hesapla() {
-        const b1 = (p('aylik')+p('ek_gosterge')+p('yan_odeme')+p('ozel_hizmet')+p('kalkinma')) * 2.35;
-        document.getElementById('top1').innerText = f(b1/2.35)+" TL";
-        document.getElementById('brut1').innerText = f(b1)+" TL";
+        // 1. KISIM - HESAPLAMA GÜNCELLENDİ
+        const m1 = p('aylik') + p('ek_gosterge') + p('yan_odeme') + p('ozel_hizmet') + p('kalkinma');
+        const b1 = m1 * 2.35;
+        document.getElementById('top1').innerText = f(m1) + " TL";
+        document.getElementById('brut1').innerText = f(b1) + " TL";
 
-        const ms = parseFloat(document.getElementById('matrah_sabit').value)||0;
-        document.getElementById('kumMatrahTaban').value = ms;
-        document.getElementById('tesvikMatrahInput').value = ms;
-
+        // 2. KISIM (SABİT)
+        const ms = p('matrah_ana');
         const os = parseFloat(document.getElementById('unvan').value)/100;
         const b2a = 9500 * 1.387871 * os;
         const n2h = (b2a * 0.99241) * 1.20;
         
         const b2 = nettenBruteKademeli(n2h, ms, 0.00759);
-        document.getElementById('net2').innerText = f(n2h)+" TL";
-        document.getElementById('brut2').innerText = f(b2)+" TL";
+        document.getElementById('net2').innerText = f(n2h) + " TL";
+        document.getElementById('brut2').innerText = f(b2) + " TL";
 
         const kf = Math.max(0, b1 - b2);
-        document.getElementById('kalan_fark').innerText = f(kf)+" TL";
+        document.getElementById('kalan_fark').innerText = f(kf) + " TL";
 
+        // 3. KISIM (TABAN) - KARTOPU BAŞLADI
+        const matrahTaban = ms + b2; 
+        document.getElementById('matrah_taban_goster').innerText = f(matrahTaban) + " TL";
+        
         const tk = parseFloat(document.getElementById('mKatsayi').value)||0;
         const tc = parseFloat(document.getElementById('carpanSecimi').value)||0;
         const b3 = 9500 * tk * tc;
-        const vd3 = getV(ms, b3);
+        
+        const vd3 = getV(matrahTaban, b3); 
         const n3 = b3 - vd3.v - (b3 * 0.00759);
-        document.getElementById('brut3').innerText = f(b3)+" TL";
-        document.getElementById('net3').innerText = f(n3)+" TL";
+        
+        document.getElementById('brut3').innerText = f(b3) + " TL";
+        document.getElementById('net3').innerText = f(n3) + " TL";
 
+        // 4. KISIM (TEŞVİK) - KARTOPU BÜYÜDÜ
+        const matrahTesvik = matrahTaban + b3; 
+        document.getElementById('matrah_tesvik_goster').innerText = f(matrahTesvik) + " TL";
+        
         const b4 = Math.max(0, kf - b3);
-        const vd4 = getV(ms + b3, b4);
+        const vd4 = getV(matrahTesvik, b4);
         const dv4 = b4 * 0.00759;
         const n4 = b4 - vd4.v - dv4;
 
-        document.getElementById('tesvikBrutGoster').innerText = f(b4)+" TL";
-        document.getElementById('gv4').innerText = f(vd4.v)+" TL";
-        document.getElementById('gvOran4').innerText = "%"+vd4.o;
-        document.getElementById('dv4').innerText = f(dv4)+" TL";
-        document.getElementById('net4').innerText = f(n4)+" TL";
+        document.getElementById('tesvikBrutGoster').innerText = f(b4) + " TL";
+        document.getElementById('gv4').innerText = f(vd4.v) + " TL";
+        document.getElementById('gvOran4').innerText = "%" + vd4.o;
+        document.getElementById('dv4').innerText = f(dv4) + " TL";
+        document.getElementById('net4').innerText = f(n4) + " TL";
     }
     window.onload = hesapla;
 </script>
